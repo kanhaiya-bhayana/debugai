@@ -1,0 +1,7 @@
+[project]
+name = "debugai"
+version = "0.1.0"
+dependencies = ["typer", "rich"]
+
+[project.scripts]
+debugai = "debugai.cli:app"

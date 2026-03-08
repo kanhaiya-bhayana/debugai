@@ -1,0 +1,2 @@
+[console_scripts]
+debugai = debugai.cli:app

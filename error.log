@@ -1,0 +1,4 @@
+System.NullReferenceException: Object reference not set to an instance of an object
+at TradeService.CalculatePnl()
+at PricingService.ProcessTrade()
+at TradeController.ExecuteTrade()th
