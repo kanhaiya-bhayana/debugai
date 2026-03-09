@@ -16,19 +16,23 @@ def explain(file: str):
     result = explain_error(log)
 
     console.print(
-        Panel(result["origin"], title="[bold_cyan]📍 Failure Origin", title_align="left", expand=False)
+        Panel(result["exception"], title="🔥 Exception Type", title_align="left", expand=False)
     )
 
     console.print(
-        Panel(result["root_cause"], title="[bold_green]🔍 Root Cause", title_align="left", expand=False)
+        Panel(result["origin"], title="📍 Failure Origin", title_align="left", expand=False)
     )
 
     console.print(
-        Panel(result["fix"], title="[bold_yellow]💡 Suggested Fix", title_align="left", expand=False)
+        Panel(result["root_cause"], title="🔍 Root Cause", title_align="left", expand=False)
     )
 
     console.print(
-        Panel(result["prevention"], title="[bold_orange]⚠️ Prevention", title_align="left", expand=False)
+        Panel(result["fix"], title="💡 Suggested Fix", title_align="left", expand=False)
+    )
+
+    console.print(
+        Panel(result["prevention"], title="⚠️ Prevention", title_align="left", expand=False)
     )
 
 
