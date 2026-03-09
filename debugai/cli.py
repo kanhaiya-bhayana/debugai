@@ -6,11 +6,9 @@ from debugai.analyzer import explain_error
 app = typer.Typer()
 console = Console()
 
+
 @app.command()
 def explain(file: str):
-    """
-    Explain an error log
-    """
 
     with open(file, "r") as f:
         log = f.read()
@@ -18,15 +16,19 @@ def explain(file: str):
     result = explain_error(log)
 
     console.print(
-        Panel(result["root_cause"], title="🔍 Root Cause", expand=False)
+        Panel(result["origin"], title="[bold_cyan]📍 Failure Origin", title_align="left", expand=False)
     )
 
     console.print(
-        Panel(result["fix"], title="💡 Suggested Fix", expand=False)
+        Panel(result["root_cause"], title="[bold_green]🔍 Root Cause", title_align="left", expand=False)
     )
 
     console.print(
-        Panel(result["prevention"], title="⚠️ Prevention", expand=False)
+        Panel(result["fix"], title="[bold_yellow]💡 Suggested Fix", title_align="left", expand=False)
+    )
+
+    console.print(
+        Panel(result["prevention"], title="[bold_orange]⚠️ Prevention", title_align="left", expand=False)
     )
 
 
