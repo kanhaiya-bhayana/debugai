@@ -24,6 +24,10 @@ def explain(file: str):
     )
 
     console.print(
+        Panel(result["chain"], title="🔗 Execution Chain", title_align="left", expand=False)
+    )
+
+    console.print(
         Panel(result["root_cause"], title="🔍 Root Cause", title_align="left", expand=False)
     )
 
