@@ -43,12 +43,14 @@ def explain_error(log: str):
     exception_type = extract_exception_type(log)
     origin = extract_failure_origin(log)
     stack_chain = extract_stack_chain(log)
+    source_file = detect_source_file(origin)
 
     if "NullReferenceException" in log:
         return {
             "exception": exception_type,
             "origin": origin,
             "chain": stack_chain,
+            "source": source_file,
             "root_cause": "A null object is being accessed.",
             "fix": "Check if the object is initialized before using it.",
             "prevention": "Add null checks before accessing object properties."
@@ -58,7 +60,20 @@ def explain_error(log: str):
         "exception": exception_type,
         "origin": origin,
         "chain": stack_chain,
+        "source": source_file,
         "root_cause": "Unknown error detected.",
         "fix": "Check the stack trace and logs.",
         "prevention": "Add better exception handling."
     }
+
+def detect_source_file(origin: str):
+    """
+    Try to detect the likely source file from the method name.
+    """
+
+    if "." not in origin:
+        return "Unknown file"
+
+    class_name = origin.split(".")[0]
+
+    return f"{class_name}.cs"
