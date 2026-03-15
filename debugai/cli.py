@@ -1,6 +1,7 @@
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import SpinnerColumn, Progress
 
 from debugai.analyzer import explain_error
 from debugai.ai_analyzer import analyze_with_ai
@@ -21,20 +22,13 @@ def explain(file: str, ai: bool = False):
     console.print(Panel(result["chain"], title="🔗 Execution Chain", title_align="left"))
 
     if ai:
-        ai_result = analyze_with_ai(log)
-
-        Panel(
-            ai_result["root_cause"],
-            title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
-            title_align="left",
-            expand=False,
-            padding=(1,2)
-        )
+        with console.status("[bold cyan]🧠 DebugAI analyzing stack trace..."):
+            ai_result = analyze_with_ai(log)
 
         console.print(
             Panel(
-                str(ai_result.get("fix", "Not available")),
-                title="[bold cyan]🛠 AI Suggested Fix[/bold cyan]",
+                ai_result["root_cause"],
+                title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
                 title_align="left",
                 expand=False
             )
@@ -42,9 +36,20 @@ def explain(file: str, ai: bool = False):
 
         console.print(
             Panel(
-                str(ai_result.get("prevention", "Not available")),
-                title="[bold yellow]🛡 AI Prevention[/bold yellow]",
+                ai_result["fix"],
+                title="[bold cyan]🛠 Suggested Fix[/bold cyan]",
                 title_align="left",
                 expand=False
             )
         )
+
+        console.print(
+            Panel(
+                ai_result["prevention"],
+                title="[bold yellow]🛡 Prevention[/bold yellow]",
+                title_align="left",
+                expand=False
+            )
+        )
+
+        console.print("[green]✔ AI analysis complete[/green]")
