@@ -1,3 +1,4 @@
+import sys
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -10,10 +11,23 @@ app = typer.Typer()
 console = Console()
 
 @app.command()
-def explain(file: str, ai: bool = False):
+def explain(
+    file: str = typer.Argument(None),
+    ai: bool = typer.Option(False, "--ai", help="Enable AI root cause analysis")
+):
 
-    with open(file) as f:
-        log = f.read()
+    # Case 1: piped input
+    if not sys.stdin.isatty():
+        log = sys.stdin.read()
+
+    # Case 2: file input
+    elif file:
+        with open(file) as f:
+            log = f.read()
+
+    else:
+        console.print("[red]No input provided[/red]")
+        raise typer.Exit()
 
     result = explain_error(log)
 
