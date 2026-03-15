@@ -1,4 +1,5 @@
 import sys
+import os
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -12,7 +13,7 @@ console = Console()
 
 @app.command()
 def explain(
-    file: str = typer.Argument(None),
+    input_value: str = typer.Argument(None),
     ai: bool = typer.Option(False, "--ai", help="Enable AI root cause analysis")
 ):
 
@@ -21,9 +22,13 @@ def explain(
         log = sys.stdin.read()
 
     # Case 2: file input
-    elif file:
-        with open(file) as f:
+    elif input_value and os.path.exists(input_value):
+        with open(input_value) as f:
             log = f.read()
+
+    # Case 3: direct error text
+    elif input_value:
+        log = input_value
 
     else:
         console.print("[red]No input provided[/red]")

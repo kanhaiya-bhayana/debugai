@@ -42,11 +42,11 @@ Goal: Build a working AI-powered CLI stack trace analyzer.
 Goal: Make DebugAI useful in real developer environments.
 
 ## Input Handling
-- [ ] Support input from STDIN  
+- [x] Support input from STDIN  
   Example:  
   `cat error.log | debugai --ai`
 
-- [ ] Allow direct error message input  
+- [x] Allow direct error message input  
   Example:  
   `debugai "NullReferenceException at TradeService"`
 
