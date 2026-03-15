@@ -1,0 +1,164 @@
+# debugai
+
+AI-powered CLI assistant for analyzing stack traces and debugging production errors.
+
+debugai parses stack traces, extracts execution flow, and optionally uses an LLM to generate root cause analysis, suggested fixes, and prevention strategies.
+
+---
+
+## ✨ Features
+
+- Extract exception type from stack traces
+- Identify failure origin
+- Reconstruct execution chain
+- Guess likely source file
+- AI-powered root cause analysis
+- Clean terminal output using Rich
+
+---
+
+## 🧠 Example
+
+Input stack trace:
+
+System.NullReferenceException
+at TradeService.CalculatePnl()
+at PricingService.ProcessTrade()
+at TradeController.ExecuteTrade()
+
+Run:
+
+debugai error.log --ai
+
+
+Output:
+
+Exception Type
+NullReferenceException
+
+Failure Origin
+TradeService.CalculatePnl()
+
+Execution Chain
+TradeController.ExecuteTrade()
+↓
+PricingService.ProcessTrade()
+↓
+TradeService.CalculatePnl()
+
+AI Root Cause
+Trade object was likely null when CalculatePnl() was invoked.
+
+Suggested Fix
+Add defensive null checks before accessing trade properties.
+
+Prevention
+Enable nullable reference types and validate inputs earlier.
+
+---
+
+## ⚙️ Installation
+
+Clone the repository:
+
+git clone https://github.com/yourusername/debugai.git
+cd debugai
+
+Install locally:
+
+pip install -e .
+
+---
+
+## 🚀 Usage
+
+Analyze a stack trace file:
+
+debugai error.log
+
+Enable AI root cause analysis:
+
+debugai error.log --ai
+
+---
+
+## 🔑 API Configuration
+
+To enable AI analysis, set your API key as an environment variable.
+
+Example using NVIDIA inference endpoint:
+
+export NVIDIA_API_KEY="your_api_key"
+
+The tool reads this value automatically.
+
+---
+
+## 📂 Project Structure
+
+debugai/
+│
+├── debugai/
+│   ├── cli.py
+│   ├── analyzer.py
+│   ├── ai_analyzer.py
+│   └── __init__.py
+│
+├── examples/
+│   └── error.log
+│
+├── pyproject.toml
+└── README.md
+
+---
+
+## 🧪 Example Stack Trace File
+
+You can test the CLI with:
+
+examples/error.log
+
+Example:
+
+System.NullReferenceException
+at TradeService.CalculatePnl()
+at PricingService.ProcessTrade()
+at TradeController.ExecuteTrade()
+
+---
+
+## 🧩 Phase 1 Scope
+
+Phase 1 focuses on building a minimal AI-powered debugging CLI with:
+
+- stack trace parsing
+- execution chain extraction
+- structured terminal output
+- optional AI analysis
+
+---
+
+## 🚧 Future Improvements
+
+Planned improvements:
+
+- analyze logs directly from stdin
+- support multiple languages (Python, Java, C#)
+- source code context extraction
+- GitHub issue search for similar bugs
+- CI/CD integration
+- Kubernetes log analysis
+
+---
+
+## 🤝 Contributing
+
+Contributions and ideas are welcome.
+
+Open an issue or submit a pull request.
+
+---
+
+## 📜 License
+
+MIT License
