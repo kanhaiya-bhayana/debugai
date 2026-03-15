@@ -1,6 +1,5 @@
 pyproject.toml
 debugai/__init__.py
-debugai/ai_analyzer.py
 debugai/analyzer.py
 debugai/cli.py
 debugai.egg-info/PKG-INFO
