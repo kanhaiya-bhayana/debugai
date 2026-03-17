@@ -7,6 +7,7 @@ from rich.progress import SpinnerColumn, Progress
 
 from debugai.analyzer import explain_error
 from debugai.ai_analyzer import analyze_with_ai
+from debugai.analyzer import extract_stack_trace_from_log
 
 app = typer.Typer()
 console = Console()
@@ -34,6 +35,8 @@ def explain(
         console.print("[red]No input provided[/red]")
         raise typer.Exit()
 
+    log = extract_stack_trace_from_log(log)
+    
     result = explain_error(log)
 
     console.print(Panel(result["exception"], title="🔥 Exception Type", title_align="left"))

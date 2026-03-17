@@ -77,3 +77,28 @@ def detect_source_file(origin: str):
     class_name = origin.split(".")[0]
 
     return f"{class_name}.cs"
+
+def extract_stack_trace_from_log(log: str):
+    """
+    Extracts the first stack trace found in raw logs.
+    """
+
+    lines = log.splitlines()
+
+    stack_trace = []
+    capture = False
+
+    for line in lines:
+
+        # Detect exception line
+        if re.search(r'\w+Exception', line):
+            capture = True
+
+        if capture:
+            stack_trace.append(line)
+
+            # Stop when stack trace ends (empty line or no 'at')
+            if line.strip() == "":
+                break
+
+    return "\n".join(stack_trace) if stack_trace else log
