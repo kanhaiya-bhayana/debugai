@@ -1,5 +1,20 @@
 import re
 
+STACK_TRACE_PATTERNS = [
+    r'at\s+([^\n]+)',                          # C# / Java
+    r'File ".*", line \d+, in ([^\n]+)',       # Python
+    r'at\s+(?:Object\.)?([^\s]+)\s+\([^\)]+\)' # Node.js
+]
+
+def extract_stack_frames(log: str):
+
+    for pattern in STACK_TRACE_PATTERNS:
+        matches = re.findall(pattern, log)
+
+        if matches:
+            return matches
+
+    return []
 
 def extract_exception_type(log: str):
     pattern = r'(\w+Exception)'
@@ -12,28 +27,23 @@ def extract_exception_type(log: str):
 
 
 def extract_failure_origin(log: str):
-    pattern = r'at\s+([^\n]+)'
-    matches = re.findall(pattern, log)
 
-    if matches:
-        return matches[0]
+    frames = extract_stack_frames(log)
+
+    if frames:
+        return frames[0]
 
     return "Unknown origin"
 
 
 def extract_stack_chain(log: str):
-    """
-    Extract full stack trace chain.
-    """
 
-    pattern = r'at\s+([^\n]+)'
-    matches = re.findall(pattern, log)
+    frames = extract_stack_frames(log)
 
-    if not matches:
+    if not frames:
         return "No stack trace detected"
 
-    # reverse for execution flow (top → bottom)
-    chain = list(reversed(matches))
+    chain = list(reversed(frames))
 
     return "\n   ↓\n".join(chain)
 
