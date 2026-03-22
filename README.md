@@ -1,4 +1,5 @@
 # debugai
+For setup instructions, see [SETUP_RUN.md](./SETUP_RUN.md)
 
 AI-powered CLI assistant for analyzing stack traces and debugging production errors.
 
