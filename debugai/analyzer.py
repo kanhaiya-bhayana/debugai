@@ -1,18 +1,14 @@
 import re
 
-STACK_TRACE_PATTERNS = [
-    r'at\s+([^\n]+)',                          # C# / Java
-    r'File ".*", line \d+, in ([^\n]+)',       # Python
-    r'at\s+(?:Object\.)?([^\s]+)\s+\([^\)]+\)' # Node.js
-]
+from debugai.parser.registry import get_parser
+
 
 def extract_stack_frames(log: str):
 
-    for pattern in STACK_TRACE_PATTERNS:
-        matches = re.findall(pattern, log)
+    parser = get_parser(log)
 
-        if matches:
-            return matches
+    if parser:
+        return parser.extract_frames(log)
 
     return []
 
