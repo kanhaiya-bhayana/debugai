@@ -1,6 +1,7 @@
 import sys
 import os
 import typer
+import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import SpinnerColumn, Progress
@@ -15,19 +16,28 @@ console = Console()
 @app.command()
 def explain(
     input_value: str = typer.Argument(None),
-    ai: bool = typer.Option(False, "--ai", help="Enable AI root cause analysis")
+    ai: bool = typer.Option(False, "--ai", help="Enable AI analysis"),
+    paste: bool = typer.Option(False, "--paste", help="Read input from clipboard")
 ):
 
-    # Case 1: piped input
-    if not sys.stdin.isatty():
+    # Case 1: clipboard
+    if paste:
+        try:
+            log = subprocess.check_output("pbpaste").decode("utf-8")
+        except Exception:
+            console.print("[red]Failed to read clipboard[/red]")
+            raise typer.Exit()
+
+    # Case 2: piped input
+    elif not sys.stdin.isatty():
         log = sys.stdin.read()
 
-    # Case 2: file input
+    # Case 3: file input
     elif input_value and os.path.exists(input_value):
         with open(input_value) as f:
             log = f.read()
 
-    # Case 3: direct error text
+    # Case 4: direct input
     elif input_value:
         log = input_value
 
