@@ -1,3 +1,12 @@
+Perfect — this is a great addition. A **`SETUP_RUN.md`** makes it super easy for anyone (including future you 😄) to quickly get started without digging into the README.
+
+Here’s a clean, GitHub-ready version tailored for your project:
+
+---
+
+# 📄 `SETUP_RUN.md`
+
+````markdown
 # DebugAI - Setup & Run Guide
 
 This guide helps you set up and run DebugAI locally.
@@ -19,3 +28,161 @@ Optional (for AI features):
 ```bash
 git clone https://github.com/yourusername/debugai.git
 cd debugai
+````
+
+---
+
+## ⚙️ Install the Project
+
+Install in editable mode:
+
+```bash
+pip install -e .
+```
+
+This allows you to make changes and use the CLI without reinstalling.
+
+---
+
+## 🔑 Setup API Key (For AI Mode)
+
+Set your API key as an environment variable.
+
+### macOS / Linux
+
+```bash
+export NVIDIA_API_KEY="your_api_key_here"
+```
+
+To persist it:
+
+```bash
+echo 'export NVIDIA_API_KEY="your_api_key_here"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+---
+
+## 🚀 Run the Tool
+
+### 1️⃣ Using a File
+
+```bash
+debugai examples/error.log
+```
+
+### 2️⃣ With AI Analysis
+
+```bash
+debugai examples/error.log --ai
+```
+
+---
+
+## 🔄 Using STDIN (Recommended)
+
+### From a file
+
+```bash
+cat examples/error.log | debugai
+```
+
+### With AI
+
+```bash
+cat examples/error.log | debugai --ai
+```
+
+---
+
+## ✏️ Direct Input
+
+```bash
+debugai "NullReferenceException at OrderService.CalculateTotal()"
+```
+
+---
+
+## 📋 Clipboard Support (macOS)
+
+```bash
+pbpaste | debugai --ai
+```
+
+---
+
+## 🧪 Example Input
+
+You can test using:
+
+```
+examples/error.log
+```
+
+Example content:
+
+```
+System.NullReferenceException
+at OrderService.CalculateTotal()
+at CartService.Checkout()
+at CheckoutController.PlaceOrder()
+```
+
+---
+
+## 🧠 What the Tool Does
+
+DebugAI will:
+
+* Extract exception type
+* Identify failure origin
+* Reconstruct execution chain
+* Optionally use AI for:
+
+  * Root cause analysis
+  * Suggested fixes
+  * Prevention strategies
+
+---
+
+## ❗ Troubleshooting
+
+### Command not found: debugai
+
+Add Python scripts to PATH:
+
+```bash
+export PATH="$HOME/Library/Python/3.9/bin:$PATH"
+```
+
+---
+
+### API Key Not Found
+
+```bash
+echo $NVIDIA_API_KEY
+```
+
+If empty, set it again.
+
+---
+
+### AI Not Working
+
+* Ensure API key is valid
+* Check internet connectivity
+* Verify model configuration
+
+---
+
+## ✅ Verify Installation
+
+Run:
+
+```bash
+debugai --help
+```
+
+If this works, setup is complete 🎉
+
+````
