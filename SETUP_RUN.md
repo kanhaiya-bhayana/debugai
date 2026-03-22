@@ -1,12 +1,3 @@
-Perfect — this is a great addition. A **`SETUP_RUN.md`** makes it super easy for anyone (including future you 😄) to quickly get started without digging into the README.
-
-Here’s a clean, GitHub-ready version tailored for your project:
-
----
-
-# 📄 `SETUP_RUN.md`
-
-````markdown
 # DebugAI - Setup & Run Guide
 
 This guide helps you set up and run DebugAI locally.
@@ -184,5 +175,3 @@ debugai --help
 ```
 
 If this works, setup is complete 🎉
-
-````
