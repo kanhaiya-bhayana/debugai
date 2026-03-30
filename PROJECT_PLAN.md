@@ -50,12 +50,12 @@ Goal: Make DebugAI useful in real developer environments.
   Example:  
   `debugai "NullReferenceException at TradeService"`
 
-- [ ] Clipboard support (macOS)  
+- [x] Clipboard support (macOS)  
   Example:  
   `pbpaste | debugai --ai`
 
 ## Log Analysis
-- [ ] Detect stack traces inside raw logs
+- [x] Detect stack traces inside raw logs
 - [ ] Extract multiple errors from log files
 - [ ] Highlight the most relevant stack trace
 
