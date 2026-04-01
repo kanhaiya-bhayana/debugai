@@ -8,3 +8,7 @@ at CartService.Checkout()
 at CheckoutController.PlaceOrder()
 
 2026-03-17 10:22:04 INFO Retrying...
+
+System.KeyNotFoundException
+at CacheService.Get()
+at ProductService.Fetch()

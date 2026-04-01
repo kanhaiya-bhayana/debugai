@@ -2,6 +2,39 @@ import re
 
 from debugai.parser.registry import get_parser
 
+def extract_all_stack_traces(log: str):
+    """
+    Extract multiple stack traces from logs.
+    """
+
+    lines = log.splitlines()
+
+    traces = []
+    current_trace = []
+    capture = False
+
+    for line in lines:
+
+        # Start of stack trace
+        if re.search(r'\w+Exception', line):
+            if current_trace:
+                traces.append("\n".join(current_trace))
+                current_trace = []
+
+            capture = True
+
+        if capture:
+            current_trace.append(line)
+
+            # End condition: blank line OR next log entry
+            if line.strip() == "":
+                capture = False
+
+    # Add last trace
+    if current_trace:
+        traces.append("\n".join(current_trace))
+
+    return traces
 
 def extract_stack_frames(log: str):
 
