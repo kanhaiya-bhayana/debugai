@@ -5,6 +5,7 @@ import subprocess
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import SpinnerColumn, Progress
+from debugai.analyzer import extract_all_stack_traces
 
 from debugai.analyzer import explain_error
 from debugai.ai_analyzer import analyze_with_ai
@@ -17,8 +18,14 @@ console = Console()
 def explain(
     input_value: str = typer.Argument(None),
     ai: bool = typer.Option(False, "--ai", help="Enable AI analysis"),
-    paste: bool = typer.Option(False, "--paste", help="Read input from clipboard")
+    paste: bool = typer.Option(False, "--paste", help="Read input from clipboard"),
+    top: int = typer.Option(
+        1,
+        "--top",
+        help="Number of recent errors to analyze"
+    )
 ):
+    
 
     # Case 1: clipboard
     if paste:
@@ -45,43 +52,59 @@ def explain(
         console.print("[red]No input provided[/red]")
         raise typer.Exit()
 
-    log = extract_stack_trace_from_log(log)
+    traces = extract_all_stack_traces(log)
+
+    if traces:
+        selected_trace = traces[-int(top):]
+    else:
+        selected_trace = []
     
-    result = explain_error(log)
+    for i, trace in enumerate(selected_trace, 1):
+        console.print(f"\n[bold cyan]Error #{i}[/bold cyan]")
 
-    console.print(Panel(result["exception"], title="🔥 Exception Type", title_align="left"))
-    console.print(Panel(result["origin"], title="📍 Failure Origin", title_align="left"))
-    console.print(Panel(result["chain"], title="🔗 Execution Chain", title_align="left"))
-
-    if ai:
-        with console.status("[bold cyan]🧠 DebugAI analyzing stack trace..."):
-            ai_result = analyze_with_ai(log)
+        result = explain_error(trace)
 
         console.print(
-            Panel(
-                ai_result["root_cause"],
-                title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
-                title_align="left",
-                expand=False
-            )
+            Panel(result["exception"], title="🔥 Exception Type", title_align="left")
         )
 
         console.print(
-            Panel(
-                ai_result["fix"],
-                title="[bold cyan]🛠 Suggested Fix[/bold cyan]",
-                title_align="left",
-                expand=False
-            )
+            Panel(result["origin"], title="📍 Failure Origin", title_align="left")
         )
 
         console.print(
-            Panel(
-                ai_result["prevention"],
-                title="[bold yellow]🛡 Prevention[/bold yellow]",
-                title_align="left",
-                expand=False
-            )
+            Panel(result["chain"], title="🔗 Execution Chain", title_align="left")
         )
 
-        console.print("[green]✔ AI analysis complete[/green]")
+        if ai:
+            with console.status("[bold cyan]🧠 DebugAI analyzing stack trace..."):
+                ai_result = analyze_with_ai(trace)
+
+            console.print(
+                Panel(
+                    ai_result["root_cause"],
+                    title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
+                    title_align="left",
+                    expand=False
+                )
+            )
+
+            console.print(
+                Panel(
+                    ai_result["fix"],
+                    title="[bold cyan]🛠 Suggested Fix[/bold cyan]",
+                    title_align="left",
+                    expand=False
+                )
+            )
+
+            console.print(
+                Panel(
+                    ai_result["prevention"],
+                    title="[bold yellow]🛡 Prevention[/bold yellow]",
+                    title_align="left",
+                    expand=False
+                )
+            )
+
+            console.print("[green]✔ AI analysis complete[/green]")
