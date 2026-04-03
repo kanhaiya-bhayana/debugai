@@ -20,6 +20,7 @@ jobs:
       - name: Install DebugAI
         run: |
           pip install git+https://github.com/kanhaiya-bhayana/debugai.git
+          pip install openai
 
       # ✅ Create a realistic test log
       - name: Simulate error log
