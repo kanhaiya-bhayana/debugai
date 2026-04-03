@@ -56,7 +56,7 @@ Goal: Make DebugAI useful in real developer environments.
 
 ## Log Analysis
 - [x] Detect stack traces inside raw logs
-- [ ] Extract multiple errors from log files
+- [x] Extract multiple errors from log files
 - [ ] Highlight the most relevant stack trace
 
 ## Language Support
