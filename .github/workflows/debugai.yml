@@ -51,4 +51,27 @@ jobs:
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
-          cat logs.txt | debugai --ai || true
+          cat logs.txt | debugai --ai > debugai_output.txt || true
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('debugai_output.txt', 'utf8');
+
+            const body = `
+            🤖 **DebugAI Analysis**
+
+            \`\`\`
+            ${output}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
