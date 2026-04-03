@@ -1,7 +1,10 @@
 import sys
 import os
 import typer
+import random
 import subprocess
+from debugai.constants.spinner_verbs import SPINNER_VERBS
+from debugai.constants.completion_spinner import COMPLETION_PHRASES
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import SpinnerColumn, Progress
@@ -77,7 +80,9 @@ def explain(
         )
 
         if ai:
-            with console.status("[bold cyan]🧠 DebugAI analyzing stack trace..."):
+            verb = random.choice(SPINNER_VERBS)
+
+            with console.status(f"[bold cyan]🧠 {verb}..."):
                 ai_result = analyze_with_ai(trace)
 
             console.print(
@@ -107,4 +112,5 @@ def explain(
                 )
             )
 
-            console.print("[green]✔ AI analysis complete[/green]")
+            phrase = random.choice(COMPLETION_PHRASES)
+            console.print(f"[green]🍳 {phrase}![/green]")
