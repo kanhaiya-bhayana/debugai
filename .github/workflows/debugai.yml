@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pytest
-          pip install git+https://github.com/yourusername/debugai.git
+          pip install git+https://github.com/kanhaiya-bhayana/debugai.git
 
       - name: Run DebugAI
         env:
