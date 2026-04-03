@@ -12,7 +12,7 @@ from debugai.analyzer import extract_all_stack_traces
 
 from debugai.analyzer import explain_error
 from debugai.ai_analyzer import analyze_with_ai
-from debugai.analyzer import extract_stack_trace_from_log
+from debugai.scorer.relevance import select_most_relevant
 
 app = typer.Typer()
 console = Console()
@@ -58,9 +58,15 @@ def explain(
     traces = extract_all_stack_traces(log)
 
     if traces:
-        selected_trace = traces[-int(top):]
+        if top > 1:
+            selected_trace = traces[-int(top):]
+        else:
+            # default to smart selection
+            selected_trace = [select_most_relevant(traces)]
     else:
         selected_trace = []
+
+    
     
     for i, trace in enumerate(selected_trace, 1):
         console.print(f"\n[bold cyan]Error #{i}[/bold cyan]")
