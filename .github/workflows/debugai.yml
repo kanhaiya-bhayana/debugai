@@ -1,8 +1,4 @@
-name: Run DebugAI
-env:
-  NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-run: |
-  cat logs.txt | debugai --ai
+name: DebugAI CI Analysis
 
 on:
   push:
@@ -30,5 +26,7 @@ jobs:
           pytest 2>&1 | tee logs.txt || true
 
       - name: Run DebugAI
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
           cat logs.txt | debugai --ai
