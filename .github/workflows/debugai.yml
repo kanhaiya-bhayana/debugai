@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   debugai:
     runs-on: ubuntu-latest
@@ -51,4 +55,55 @@ jobs:
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
-          cat logs.txt | debugai --ai || true
+          cat logs.txt | debugai --ai > debugai_output.txt || true
+
+      - name: Comment on PR (Update if exists)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read DebugAI output
+            const output = fs.readFileSync('debugai_output.txt', 'utf8');
+
+            const marker = "<!-- DEBUGAI_COMMENT -->";
+
+            const body = `
+            ${marker}
+            🤖 **DebugAI Analysis**
+
+            \`\`\`
+            ${output}
+            \`\`\`
+            `;
+
+            // Fetch existing comments
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            // Try to find existing DebugAI comment
+            const existingComment = comments.data.find(comment =>
+              comment.body.includes(marker)
+            );
+
+            if (existingComment) {
+              // ✅ Update existing comment
+              await github.rest.issues.updateComment({
+                comment_id: existingComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } else {
+              // 🆕 Create new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
