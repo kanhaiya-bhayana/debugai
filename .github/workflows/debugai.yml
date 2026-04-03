@@ -21,6 +21,7 @@ jobs:
         run: |
           pip install pytest
           pip install git+https://github.com/kanhaiya-bhayana/debugai.git
+          pip install openai
 
       - name: Run DebugAI
         env:
