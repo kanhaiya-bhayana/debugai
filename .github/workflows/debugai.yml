@@ -1,4 +1,4 @@
-- name: Run DebugAI
+name: Run DebugAI
   env:
     NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
   run: |
