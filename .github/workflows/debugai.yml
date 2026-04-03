@@ -18,7 +18,7 @@ jobs:
           python-version: '3.9'
 
       - name: Install DebugAI
-        run: pip install git+https://github.com/yourusername/debugai.git
+        run: pip install git+https://github.com/kanhaiya-bhayana/debugai.git
 
       - name: Run tests and capture logs
         run: |
