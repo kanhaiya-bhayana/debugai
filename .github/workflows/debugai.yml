@@ -17,16 +17,14 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install DebugAI
-        run: pip install git+https://github.com/kanhaiya-bhayana/debugai.git
-
-      - name: Run tests and capture logs
+      - name: Install dependencies
         run: |
-          echo "Running tests..."
-          pytest 2>&1 | tee logs.txt || true
+          pip install pytest
+          pip install git+https://github.com/yourusername/debugai.git
 
       - name: Run DebugAI
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
-          cat logs.txt | debugai --ai
+          echo "Simulating error..."
+          cat error.log | debugai --ai || true
