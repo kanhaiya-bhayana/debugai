@@ -6,6 +6,7 @@ HIGH_PRIORITY = [
 ]
 
 MEDIUM_PRIORITY = [
+    "KeyNotFoundException",
     "Timeout",
     "Connection",
     "IOException"
