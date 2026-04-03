@@ -17,15 +17,37 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
+      - name: Install DebugAI
         run: |
-          pip install pytest
           pip install git+https://github.com/kanhaiya-bhayana/debugai.git
-          pip install openai
 
+      # ✅ Create a realistic test log
+      - name: Simulate error log
+        run: |
+          cat <<EOF > logs.txt
+          2026-03-17 10:22:01 INFO Starting service
+          2026-03-17 10:22:02 INFO Processing order
+
+          System.NullReferenceException
+          at OrderService.CalculateTotal()
+          at CartService.Checkout()
+
+          INFO Retrying...
+
+          System.TimeoutException
+          at RetryService.Call()
+          EOF
+
+      # ✅ Debug: show what DebugAI will receive
+      - name: Show logs
+        run: |
+          echo "===== LOG CONTENT ====="
+          cat logs.txt
+          echo "======================="
+
+      # ✅ Run DebugAI
       - name: Run DebugAI
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: |
-          echo "Simulating error..."
-          cat error.log | debugai --ai || true
+          cat logs.txt | debugai --ai || true
