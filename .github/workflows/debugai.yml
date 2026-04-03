@@ -1,8 +1,8 @@
 name: Run DebugAI
-  env:
-    NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
-  run: |
-    cat logs.txt | debugai --ai
+env:
+  NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+run: |
+  cat logs.txt | debugai --ai
 
 on:
   push:
