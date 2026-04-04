@@ -30,9 +30,8 @@ jobs:
       - name: Simulate error log
         run: |
           cat <<EOF > logs.txt
-          System.NullReferenceException
-          at OrderService.CalculateTotal()
-          INFO Retrying...
+          INFO Service started
+          ERROR Something failed
           EOF
 
       # ✅ Debug: show what DebugAI will receive
