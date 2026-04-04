@@ -30,18 +30,11 @@ jobs:
       - name: Simulate error log
         run: |
           cat <<EOF > logs.txt
-          2026-03-17 10:22:01 INFO Starting service
-          2026-03-17 10:22:02 INFO Processing order
+          Traceback (most recent call last):
+          KeyError: 'price'
 
           System.NullReferenceException
           at OrderService.CalculateTotal()
-          at CartService.Checkout()
-
-          INFO Retrying...
-
-          System.TimeoutException
-          at RetryService.Call()
-          EOF
 
       # ✅ Debug: show what DebugAI will receive
       - name: Show logs
@@ -57,15 +50,20 @@ jobs:
         run: |
           cat logs.txt | debugai --ai > debugai_output.txt || true
 
-      - name: Comment on PR (Update if exists)
+      - name: Comment on PR (only if error exists)
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
 
-            // Read DebugAI output
             const output = fs.readFileSync('debugai_output.txt', 'utf8');
+
+            // ❌ Skip if no error detected
+            if (output.includes("No stack trace detected")) {
+              console.log("No error found — skipping PR comment");
+              return;
+            }
 
             const marker = "<!-- DEBUGAI_COMMENT -->";
 
@@ -78,20 +76,17 @@ jobs:
             \`\`\`
             `;
 
-            // Fetch existing comments
             const comments = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
             });
 
-            // Try to find existing DebugAI comment
             const existingComment = comments.data.find(comment =>
               comment.body.includes(marker)
             );
 
             if (existingComment) {
-              // ✅ Update existing comment
               await github.rest.issues.updateComment({
                 comment_id: existingComment.id,
                 owner: context.repo.owner,
@@ -99,7 +94,6 @@ jobs:
                 body: body
               });
             } else {
-              // 🆕 Create new comment
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
