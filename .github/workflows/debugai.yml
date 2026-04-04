@@ -30,9 +30,11 @@ jobs:
       - name: Simulate error log
         run: |
           cat <<EOF > logs.txt
-          INFO Service started
-          ERROR Something failed
-          EOF
+          Traceback (most recent call last):
+          KeyError: 'price'
+
+          System.NullReferenceException
+          at OrderService.CalculateTotal()
 
       # ✅ Debug: show what DebugAI will receive
       - name: Show logs
