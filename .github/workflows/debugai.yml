@@ -30,17 +30,9 @@ jobs:
       - name: Simulate error log
         run: |
           cat <<EOF > logs.txt
-          2026-03-17 10:22:01 INFO Starting service
-          2026-03-17 10:22:02 INFO Processing order
-
-          System.KeyNotFoundException
-          at CacheService.Get()
-          at ProductService.Fetch()
-
+          System.NullReferenceException
+          at OrderService.CalculateTotal()
           INFO Retrying...
-
-          System.TimeoutException
-          at RetryService.Call()
           EOF
 
       # ✅ Debug: show what DebugAI will receive
