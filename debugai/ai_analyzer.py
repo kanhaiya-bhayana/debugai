@@ -1,12 +1,3 @@
-from openai import OpenAI
-import os
-
-client = OpenAI(
-    base_url="https://integrate.api.nvidia.com/v1",
-    api_key=os.getenv("NVIDIA_API_KEY")
-)
-
-
 import json 
 import re
 
@@ -41,6 +32,23 @@ Stack trace:
 """
 
     try:
+        import os
+        from openai import OpenAI
+
+        api_key = os.getenv("NVIDIA_API_KEY")
+        
+        if not api_key:
+            return {
+                "root_cause": "AI disabled (no API key)",
+                "fix": "",
+                "prevention": ""
+            }
+        
+        client = OpenAI(
+            base_url="https://integrate.api.nvidia.com/v1",
+            api_key=api_key
+        )
+        
         completion = client.chat.completions.create(
             model="z-ai/glm4.7",
             messages=[

@@ -34,6 +34,9 @@ def extract_all_stack_traces(log: str):
     if current_trace:
         traces.append("\n".join(current_trace))
 
+    if not traces:
+        return []
+
     return traces
 
 def extract_stack_frames(log: str):
