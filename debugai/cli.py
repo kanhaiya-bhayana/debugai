@@ -29,6 +29,13 @@ def explain(
     )
 ):
     
+    MAX_LINES = 300
+
+    def trim_log(log: str) -> str:
+        lines = log.splitlines()
+        if len(lines) > MAX_LINES:
+            return "\n".join(lines[-MAX_LINES:])
+        return log
 
     # Case 1: clipboard
     if paste:
@@ -54,12 +61,20 @@ def explain(
     else:
         console.print("[red]No input provided[/red]")
         raise typer.Exit()
+    
+    log = trim_log(log)
 
     traces = extract_all_stack_traces(log)
 
+    if not traces:
+        console.print("[yellow]No stack trace detected[/yellow]")
+        return
+
+    top = int(top)
+
     if traces:
         if top > 1:
-            selected_trace = traces[-int(top):]
+            selected_trace = traces[-top:] if len(traces) >= top else traces
         else:
             # default to smart selection
             selected_trace = [select_most_relevant(traces)]
