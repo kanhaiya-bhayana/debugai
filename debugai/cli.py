@@ -56,7 +56,7 @@ def explain(
 
     # Case 3: file input
     elif input_value and os.path.exists(input_value):
-        with open(input_value) as f:
+        with open(input_value, encoding="utf-8", errors="replace") as f:
             log = f.read()
 
     # Case 4: direct input
