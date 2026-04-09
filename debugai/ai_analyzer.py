@@ -1,72 +1,73 @@
-import json 
-import re
+from debugai import PROVIDERS
 
-def parse_ai_json(text):
 
-    try:
-        return json.loads(text)
+def get_provider(name: str = None):
+    """
+    Return a provider instance.
 
-    except:
-        # try extracting JSON block
-        match = re.search(r"\{.*\}", text, re.DOTALL)
+    If `name` is given (e.g. "openai", "anthropic", "nvidia"), return that
+    provider if its key is set — or raise a clear error if not.
 
-        if match:
-            return json.loads(match.group())
-
-        raise
-def analyze_with_ai(log: str):
-
-    prompt = f"""
-You are a senior software engineer debugging a production issue.
-
-Return STRICT JSON in this format:
-
-{{
- "root_cause": "...",
- "fix": "...",
- "prevention": "..."
-}}
-
-Stack trace:
-{log}
-"""
-
-    try:
-        import os
-        from openai import OpenAI
-
-        api_key = os.getenv("NVIDIA_API_KEY")
-        
-        if not api_key:
-            return {
-                "root_cause": "AI disabled (no API key)",
-                "fix": "",
-                "prevention": ""
-            }
-        
-        client = OpenAI(
-            base_url="https://integrate.api.nvidia.com/v1",
-            api_key=api_key
-        )
-        
-        completion = client.chat.completions.create(
-            model="z-ai/glm4.7",
-            messages=[
-                {"role": "system", "content": "You are an expert debugging assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.2,
-            max_tokens=2000
+    If `name` is None, auto-detect by walking PROVIDERS in priority order
+    (OpenAI → Anthropic → NVIDIA) and returning the first available one.
+    """
+    if name:
+        name = name.lower()
+        for provider in PROVIDERS:
+            if provider.name().lower() == name:
+                if not provider.is_available():
+                    raise EnvironmentError(
+                        f"Provider '{provider.name()}' requested but "
+                        f"{provider.name().upper()}_API_KEY is not set."
+                    )
+                return provider
+        available = [p.name().lower() for p in PROVIDERS]
+        raise ValueError(
+            f"Unknown provider '{name}'. Available: {', '.join(available)}"
         )
 
-        content = completion.choices[0].message.content
-        ai_result = parse_ai_json(content)
+    for provider in PROVIDERS:
+        if provider.is_available():
+            return provider
 
-        return ai_result
+    # Nothing available — tell the user exactly what to do
+    raise EnvironmentError(
+        "No AI provider configured.\n"
+        "Set one of the following environment variables:\n"
+        "  export OPENAI_API_KEY=...      (recommended)\n"
+        "  export ANTHROPIC_API_KEY=...\n"
+        "  export NVIDIA_API_KEY=..."
+    )
+
+
+def analyze_with_ai(log: str, provider_name: str = None) -> dict:
+    """
+    Run AI analysis on a stack trace.
+
+    Args:
+        log:           The raw stack trace string.
+        provider_name: Optional override ("openai", "anthropic", "nvidia").
+                       If None, auto-detects from env vars.
+
+    Returns:
+        dict with keys: root_cause, fix, prevention
+    """
+    try:
+        provider = get_provider(provider_name)
+        prompt = provider.build_prompt(log)
+        raw = provider.analyze(prompt)
+        return provider.parse_response(raw)
+
+    except EnvironmentError as e:
+        return {
+            "root_cause": str(e),
+            "fix": "",
+            "prevention": ""
+        }
 
     except Exception as e:
         return {
-            "root_cause": "AI analysis failed",
+            "root_cause": "AI analysis failed.",
             "fix": str(e),
-            "prevention": "Check API configuration"
+            "prevention": "Check your API key and network connection."
         }
