@@ -16,19 +16,24 @@ from debugai.scorer.relevance import select_most_relevant
 
 app = typer.Typer()
 console = Console()
-# just testing another change
+
 @app.command()
 def explain(
     input_value: str = typer.Argument(None),
     ai: bool = typer.Option(False, "--ai", help="Enable AI analysis"),
     paste: bool = typer.Option(False, "--paste", help="Read input from clipboard"),
+    provider: str = typer.Option(
+        None,
+        "--provider",
+        help="AI provider to use: openai, anthropic, nvidia (default: auto-detect)"
+    ),
     top: int = typer.Option(
         1,
         "--top",
         help="Number of recent errors to analyze"
     )
 ):
-    
+
     MAX_LINES = 300
 
     def trim_log(log: str) -> str:
@@ -59,30 +64,24 @@ def explain(
         log = input_value
 
     else:
-        console.print("[red]No input provided[/red]")
+        console.print("[red]No input provided. Pass a file, pipe a log, or use --paste.[/red]")
         raise typer.Exit()
-    
+
     log = trim_log(log)
 
     traces = extract_all_stack_traces(log)
 
     if not traces:
-        console.print("[yellow]No stack trace detected[/yellow]")
+        console.print("[yellow]No stack trace detected in input.[/yellow]")
         return
 
     top = int(top)
 
-    if traces:
-        if top > 1:
-            selected_trace = traces[-top:] if len(traces) >= top else traces
-        else:
-            # default to smart selection
-            selected_trace = [select_most_relevant(traces)]
+    if top > 1:
+        selected_trace = traces[-top:] if len(traces) >= top else traces
     else:
-        selected_trace = []
+        selected_trace = [select_most_relevant(traces)]
 
-    
-    
     for i, trace in enumerate(selected_trace, 1):
         console.print(f"\n[bold cyan]Error #{i}[/bold cyan]")
 
@@ -104,7 +103,7 @@ def explain(
             verb = random.choice(SPINNER_VERBS)
 
             with console.status(f"[bold cyan]🧠 {verb}..."):
-                ai_result = analyze_with_ai(trace)
+                ai_result = analyze_with_ai(trace, provider_name=provider)
 
             console.print(
                 Panel(
