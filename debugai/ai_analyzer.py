@@ -1,4 +1,4 @@
-from debugai.providers import PROVIDERS
+from debugai import PROVIDERS
 
 
 def get_provider(name: str = None):
