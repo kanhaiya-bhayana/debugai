@@ -1,0 +1,18 @@
+[project]
+name = "debugai"
+version = "0.1.0"
+dependencies = [
+    "typer",
+    "rich",
+    "openai",
+    "anthropic"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov"
+]
+
+[project.scripts]
+debugai = "debugai.cli:app"
