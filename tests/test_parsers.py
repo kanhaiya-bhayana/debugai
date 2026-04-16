@@ -1,13 +1,15 @@
 """
-Tests for debugai/parser/  — match() and extract_frames() for each parser.
+Tests for debugai/parser/ — match() and extract_frames() for each parser.
 """
 import pytest
 from debugai.parser.python import PythonParser
-from debugai.parser.csharp_java import CSharpJavaParser
+from debugai.parser.java import JavaParser
+from debugai.parser.go import GoParser
+from debugai.parser.csharp import CSharpParser
 from debugai.parser.node import NodeParser
 from debugai.parser.registry import get_parser
 
-# ── Fixtures ─────────────────────────────────────────────────────────────────
+# ── Fixtures ──────────────────────────────────────────────────────────────────
 
 PYTHON_TRACE = """\
 Traceback (most recent call last):
@@ -39,8 +41,35 @@ at TradeController.ExecuteTrade()"""
 
 JAVA_TRACE = """\
 java.lang.NullPointerException
-at com.example.OrderService.calculateTotal(OrderService.java:42)
-at com.example.OrderController.placeOrder(OrderController.java:18)"""
+\tat com.example.OrderService.calculateTotal(OrderService.java:42)
+\tat com.example.OrderController.placeOrder(OrderController.java:18)
+\tat com.example.MainApp.main(MainApp.java:10)"""
+
+JAVA_SPRING_TRACE = """\
+org.springframework.web.util.NestedServletException: Request processing failed
+\tat com.example.api.UserController.getUser(UserController.java:55)
+\tat com.example.service.UserService.findById(UserService.java:30)
+\tat com.example.repository.UserRepository.query(UserRepository.java:12)"""
+
+GO_TRACE = """\
+goroutine 1 [running]:
+main.divide(0x5, 0x0)
+\t/home/user/app/main.go:15 +0x52
+main.calculate(...)
+\t/home/user/app/main.go:9
+main.main()
+\t/home/user/app/main.go:4 +0x25"""
+
+GO_PANIC_TRACE = """\
+panic: runtime error: index out of range [3] with length 3
+
+goroutine 1 [running]:
+main.processItems(0xc000012080, 0x3, 0x3)
+\t/home/user/app/processor.go:22 +0x1d
+main.run()
+\t/home/user/app/main.go:10 +0x39
+main.main()
+\t/home/user/app/main.go:5 +0x25"""
 
 NODE_TRACE = """\
 TypeError: Cannot read properties of undefined
@@ -65,8 +94,13 @@ class TestPythonParser:
     def test_no_match_plain_text(self):
         assert self.parser.match("Everything is fine, nothing to see here.") is False
 
+    def test_no_match_java(self):
+        assert self.parser.match(JAVA_TRACE) is False
+
+    def test_no_match_go(self):
+        assert self.parser.match(GO_TRACE) is False
+
     def test_extract_frames_order(self):
-        """Innermost frame (parse_input) must be first — failure origin."""
         frames = self.parser.extract_frames(PYTHON_TRACE)
         assert frames[0] == "parse_input"
 
@@ -85,29 +119,124 @@ class TestPythonParser:
         assert self.parser.extract_exception_type(PYTHON_TRACE_KEY_ERROR) == "KeyError"
 
 
-# ── CSharpJavaParser ──────────────────────────────────────────────────────────
+# ── JavaParser ────────────────────────────────────────────────────────────────
 
-class TestCSharpJavaParser:
-    parser = CSharpJavaParser()
+class TestJavaParser:
+    parser = JavaParser()
+
+    def test_match_java(self):
+        assert self.parser.match(JAVA_TRACE) is True
+
+    def test_match_spring_trace(self):
+        assert self.parser.match(JAVA_SPRING_TRACE) is True
+
+    def test_no_match_csharp(self):
+        assert self.parser.match(CSHARP_TRACE) is False
+
+    def test_no_match_python(self):
+        assert self.parser.match(PYTHON_TRACE) is False
+
+    def test_no_match_plain_text(self):
+        assert self.parser.match("no error here") is False
+
+    def test_extract_frames_not_empty(self):
+        frames = self.parser.extract_frames(JAVA_TRACE)
+        assert len(frames) > 0
+
+    def test_extract_frames_innermost_first(self):
+        frames = self.parser.extract_frames(JAVA_TRACE)
+        assert "calculateTotal" in frames[0]
+
+    def test_extract_frames_full_chain(self):
+        frames = self.parser.extract_frames(JAVA_TRACE)
+        assert len(frames) == 3
+
+    def test_extract_exception_type_null_pointer(self):
+        result = self.parser.extract_exception_type(JAVA_TRACE)
+        assert result == "NullPointerException"
+
+    def test_extract_exception_type_short_name(self):
+        result = self.parser.extract_exception_type(JAVA_TRACE)
+        assert "." not in result
+
+    def test_extract_location(self):
+        file, line, func = self.parser.extract_location(JAVA_TRACE)
+        assert file == "OrderService.java"
+        assert line == "42"
+
+
+# ── GoParser ──────────────────────────────────────────────────────────────────
+
+class TestGoParser:
+    parser = GoParser()
+
+    def test_match_goroutine_trace(self):
+        assert self.parser.match(GO_TRACE) is True
+
+    def test_match_panic_trace(self):
+        assert self.parser.match(GO_PANIC_TRACE) is True
+
+    def test_no_match_python(self):
+        assert self.parser.match(PYTHON_TRACE) is False
+
+    def test_no_match_java(self):
+        assert self.parser.match(JAVA_TRACE) is False
+
+    def test_no_match_csharp(self):
+        assert self.parser.match(CSHARP_TRACE) is False
+
+    def test_no_match_plain_text(self):
+        assert self.parser.match("no error here") is False
+
+    def test_extract_frames_not_empty(self):
+        frames = self.parser.extract_frames(GO_TRACE)
+        assert len(frames) > 0
+
+    def test_extract_frames_filters_runtime(self):
+        trace = """\
+goroutine 1 [running]:
+runtime.gopanic(0x10a3e00, 0xc000012080)
+\t/usr/local/go/src/runtime/panic.go:522
+main.doWork()
+\t/home/user/app/worker.go:14 +0x45"""
+        frames = self.parser.extract_frames(trace)
+        user_frames = [f for f in frames if "main." in f]
+        assert len(user_frames) > 0
+
+    def test_extract_exception_type_index_out_of_range(self):
+        result = self.parser.extract_exception_type(GO_PANIC_TRACE)
+        assert result == "IndexOutOfRangeError"
+
+    def test_extract_exception_type_general_panic(self):
+        result = self.parser.extract_exception_type(GO_TRACE)
+        assert result == "GoPanic"
+
+
+# ── CSharpParser ──────────────────────────────────────────────────────────────
+
+class TestCSharpParser:
+    parser = CSharpParser()
 
     def test_match_csharp(self):
         assert self.parser.match(CSHARP_TRACE) is True
 
-    def test_match_java(self):
-        assert self.parser.match(JAVA_TRACE) is True
+    def test_no_match_java(self):
+        assert self.parser.match(JAVA_TRACE) is False
 
     def test_no_match_plain_text(self):
         assert self.parser.match("no error here") is False
 
     def test_extract_frames_csharp(self):
         frames = self.parser.extract_frames(CSHARP_TRACE)
-        assert "TradeService.CalculatePnl()" in frames
-        assert "TradeController.ExecuteTrade()" in frames
+        assert len(frames) > 0
+        assert any("TradeService" in f for f in frames)
 
-    def test_extract_frames_order_csharp(self):
-        """First frame should be innermost for C# traces."""
+    def test_extract_frames_innermost_first(self):
         frames = self.parser.extract_frames(CSHARP_TRACE)
-        assert frames[0] == "TradeService.CalculatePnl()"
+        assert "TradeService.CalculatePnl()" in frames[0]
+
+    def test_extract_exception_type(self):
+        assert self.parser.extract_exception_type(CSHARP_TRACE) == "NullReferenceException"
 
 
 # ── NodeParser ────────────────────────────────────────────────────────────────
@@ -121,6 +250,9 @@ class TestNodeParser:
     def test_no_match_python(self):
         assert self.parser.match(PYTHON_TRACE) is False
 
+    def test_no_match_java(self):
+        assert self.parser.match(JAVA_TRACE) is False
+
     def test_extract_frames_node(self):
         frames = self.parser.extract_frames(NODE_TRACE)
         assert len(frames) > 0
@@ -131,17 +263,26 @@ class TestNodeParser:
 class TestRegistry:
 
     def test_routes_python(self):
-        parser = get_parser(PYTHON_TRACE)
-        assert isinstance(parser, PythonParser)
+        assert isinstance(get_parser(PYTHON_TRACE), PythonParser)
+
+    def test_routes_java(self):
+        assert isinstance(get_parser(JAVA_TRACE), JavaParser)
+
+    def test_routes_go(self):
+        assert isinstance(get_parser(GO_TRACE), GoParser)
+
+    def test_routes_go_panic(self):
+        assert isinstance(get_parser(GO_PANIC_TRACE), GoParser)
 
     def test_routes_csharp(self):
-        parser = get_parser(CSHARP_TRACE)
-        assert isinstance(parser, CSharpJavaParser)
+        assert isinstance(get_parser(CSHARP_TRACE), CSharpParser)
 
     def test_routes_node(self):
-        parser = get_parser(NODE_TRACE)
-        assert isinstance(parser, NodeParser)
+        assert isinstance(get_parser(NODE_TRACE), NodeParser)
+
+    def test_java_not_stolen_by_csharp(self):
+        parser = get_parser(JAVA_TRACE)
+        assert not isinstance(parser, CSharpParser)
 
     def test_returns_none_for_garbage(self):
-        parser = get_parser("this is not a stack trace at all")
-        assert parser is None
+        assert get_parser("this is not a stack trace at all") is None

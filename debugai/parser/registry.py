@@ -1,19 +1,27 @@
-from .csharp_java import CSharpJavaParser
 from .python import PythonParser
+from .java import JavaParser
+from .go import GoParser
+from .csharp import CSharpParser
 from .node import NodeParser
 
-
+# Order matters — most specific matchers first, broadest last.
+#
+# PythonParser  → anchors on "Traceback (most recent call last)"
+# JavaParser    → anchors on ".java:\d+" in frames
+# GoParser      → anchors on "goroutine \d+ [" or "panic:" + ".go:\d+"
+# CSharpParser  → "at " + "Exception", no .java (broad — must come after Java)
+# NodeParser    → anchors on ".js:" in frames
 PARSERS = [
-    CSharpJavaParser(),
     PythonParser(),
-    NodeParser()
+    JavaParser(),
+    GoParser(),
+    CSharpParser(),
+    NodeParser(),
 ]
 
 
 def get_parser(log: str):
-
     for parser in PARSERS:
         if parser.match(log):
             return parser
-
     return None
