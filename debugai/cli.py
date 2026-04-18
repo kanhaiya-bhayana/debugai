@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import typer
 import random
 import subprocess
@@ -7,15 +8,25 @@ from debugai.constants.spinner_verbs import SPINNER_VERBS
 from debugai.constants.completion_spinner import COMPLETION_PHRASES
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import SpinnerColumn, Progress
-from debugai.analyzer import extract_all_stack_traces
-
-from debugai.analyzer import explain_error
+from debugai.analyzer import extract_all_stack_traces, explain_error
 from debugai.ai_analyzer import analyze_with_ai
 from debugai.scorer.relevance import select_most_relevant
 
 app = typer.Typer()
 console = Console()
+
+# Confidence badge colours for Rich output
+_CONFIDENCE_STYLE = {
+    "high":   "bold green",
+    "medium": "bold yellow",
+    "low":    "bold red",
+}
+_CONFIDENCE_ICON = {
+    "high":   "🟢",
+    "medium": "🟡",
+    "low":    "🔴",
+}
+
 
 @app.command()
 def explain(
@@ -25,15 +36,19 @@ def explain(
     provider: str = typer.Option(
         None,
         "--provider",
-        help="AI provider to use: openai, anthropic, nvidia (default: auto-detect)"
+        help="AI provider: openai, anthropic, nvidia (default: auto-detect)"
     ),
     top: int = typer.Option(
         1,
         "--top",
         help="Number of recent errors to analyze"
-    )
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output results as clean JSON (suppresses Rich formatting)"
+    ),
 ):
-
     MAX_LINES = 300
 
     def trim_log(log: str) -> str:
@@ -42,95 +57,122 @@ def explain(
             return "\n".join(lines[-MAX_LINES:])
         return log
 
-    # Case 1: clipboard
+    # ── Input resolution ──────────────────────────────────────────────
     if paste:
         try:
             log = subprocess.check_output("pbpaste").decode("utf-8")
         except Exception:
-            console.print("[red]Failed to read clipboard[/red]")
+            if not json_output:
+                console.print("[red]Failed to read clipboard[/red]")
             raise typer.Exit()
 
-    # Case 2: piped input
     elif not sys.stdin.isatty():
         log = sys.stdin.read()
 
-    # Case 3: file input
     elif input_value and os.path.exists(input_value):
         with open(input_value, encoding="utf-8", errors="replace") as f:
             log = f.read()
 
-    # Case 4: direct input
     elif input_value:
         log = input_value
 
     else:
-        console.print("[red]No input provided. Pass a file, pipe a log, or use --paste.[/red]")
+        if not json_output:
+            console.print("[red]No input provided. Pass a file, pipe a log, or use --paste.[/red]")
         raise typer.Exit()
 
     log = trim_log(log)
-
     traces = extract_all_stack_traces(log)
 
     if not traces:
-        console.print("[yellow]No stack trace detected in input.[/yellow]")
+        if json_output:
+            print(json.dumps({"error": "No stack trace detected in input."}))
+        else:
+            console.print("[yellow]No stack trace detected in input.[/yellow]")
         return
 
     top = int(top)
+    selected_trace = (
+        traces[-top:] if top > 1 and len(traces) >= top
+        else traces if top > 1
+        else [select_most_relevant(traces)]
+    )
 
-    if top > 1:
-        selected_trace = traces[-top:] if len(traces) >= top else traces
-    else:
-        selected_trace = [select_most_relevant(traces)]
+    # ── JSON mode — clean stdout, no Rich ────────────────────────────
+    if json_output:
+        output = []
+        for trace in selected_trace:
+            result = explain_error(trace)
+            entry = {
+                "exception":       result["exception"],
+                "failure_origin":  result["origin"],
+                "execution_chain": result["chain"].split("\n   ↓\n"),
+                "source_file":     result["source"],
+                "language":        _detect_language(trace),
+            }
+            if ai:
+                ai_result = analyze_with_ai(trace, provider_name=provider)
+                entry["ai"] = {
+                    "root_cause":  ai_result.get("root_cause", ""),
+                    "fix":         ai_result.get("fix", ""),
+                    "prevention":  ai_result.get("prevention", ""),
+                    "confidence":  ai_result.get("confidence", "low"),
+                }
+            output.append(entry)
 
+        # Single trace → object, multiple → array
+        print(json.dumps(output[0] if len(output) == 1 else output, indent=2))
+        return
+
+    # ── Rich mode — formatted terminal output ─────────────────────────
     for i, trace in enumerate(selected_trace, 1):
         console.print(f"\n[bold cyan]Error #{i}[/bold cyan]")
-
         result = explain_error(trace)
 
-        console.print(
-            Panel(result["exception"], title="🔥 Exception Type", title_align="left")
-        )
-
-        console.print(
-            Panel(result["origin"], title="📍 Failure Origin", title_align="left")
-        )
-
-        console.print(
-            Panel(result["chain"], title="🔗 Execution Chain", title_align="left")
-        )
+        console.print(Panel(result["exception"], title="🔥 Exception Type", title_align="left"))
+        console.print(Panel(result["origin"],    title="📍 Failure Origin", title_align="left"))
+        console.print(Panel(result["chain"],     title="🔗 Execution Chain", title_align="left"))
 
         if ai:
             verb = random.choice(SPINNER_VERBS)
-
             with console.status(f"[bold cyan]🧠 {verb}..."):
                 ai_result = analyze_with_ai(trace, provider_name=provider)
 
-            console.print(
-                Panel(
-                    ai_result["root_cause"],
-                    title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
-                    title_align="left",
-                    expand=False
-                )
-            )
+            confidence = ai_result.get("confidence", "low")
+            style = _CONFIDENCE_STYLE.get(confidence, "bold red")
+            icon  = _CONFIDENCE_ICON.get(confidence, "🔴")
 
+            console.print(Panel(
+                ai_result.get("root_cause", ""),
+                title="[bold magenta]🤖 AI Root Cause[/bold magenta]",
+                title_align="left", expand=False
+            ))
+            console.print(Panel(
+                ai_result.get("fix", ""),
+                title="[bold cyan]🛠 Suggested Fix[/bold cyan]",
+                title_align="left", expand=False
+            ))
+            console.print(Panel(
+                ai_result.get("prevention", ""),
+                title="[bold yellow]🛡 Prevention[/bold yellow]",
+                title_align="left", expand=False
+            ))
             console.print(
-                Panel(
-                    ai_result["fix"],
-                    title="[bold cyan]🛠 Suggested Fix[/bold cyan]",
-                    title_align="left",
-                    expand=False
-                )
-            )
-
-            console.print(
-                Panel(
-                    ai_result["prevention"],
-                    title="[bold yellow]🛡 Prevention[/bold yellow]",
-                    title_align="left",
-                    expand=False
-                )
+                f"[{style}]{icon} Confidence: {confidence.upper()}[/{style}]"
             )
 
             phrase = random.choice(COMPLETION_PHRASES)
             console.print(f"[green]🍳 {phrase}![/green]")
+
+
+def _detect_language(trace: str) -> str:
+    """Best-effort language detection for the JSON output schema."""
+    if "Traceback (most recent call last)" in trace:
+        return "python"
+    if ".java:" in trace:
+        return "java"
+    if "goroutine" in trace or "panic:" in trace:
+        return "go"
+    if ".js:" in trace:
+        return "node"
+    return "csharp"
