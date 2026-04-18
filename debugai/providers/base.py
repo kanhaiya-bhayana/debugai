@@ -21,45 +21,79 @@ class AIProvider(ABC):
         raise NotImplementedError
 
     # ------------------------------------------------------------------ #
-    #  Shared helpers — all providers use these                           #
+    #  Prompt                                                             #
     # ------------------------------------------------------------------ #
-
-    def parse_response(self, text: str) -> dict:
-        """
-        Parse the model's response into a structured dict.
-        Tries strict JSON first, then extracts a JSON block, then falls back
-        to returning the raw text as root_cause.
-        """
-        try:
-            return json.loads(text)
-        except Exception:
-            pass
-
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            try:
-                return json.loads(match.group())
-            except Exception:
-                pass
-
-        # Last resort: return raw text so the user sees something useful
-        return {
-            "root_cause": text.strip() or "No response from model.",
-            "fix": "",
-            "prevention": ""
-        }
 
     def build_prompt(self, log: str) -> str:
         return f"""You are a senior software engineer debugging a production issue.
 
-Return STRICT JSON in this exact format with no other text:
+Respond ONLY with a JSON object — no explanation, no markdown, no code fences.
 
+The JSON must follow this exact schema:
 {{
-  "root_cause": "...",
-  "fix": "...",
-  "prevention": "..."
+  "root_cause": "A concise explanation of why this error occurred.",
+  "fix": "The specific code change or action needed to fix it.",
+  "prevention": "How to prevent this class of error in future.",
+  "confidence": "high | medium | low"
 }}
+
+Confidence guide:
+- high   → the stack trace clearly identifies the cause
+- medium → likely cause identified but some context is missing
+- low    → not enough information to be certain
 
 Stack trace:
 {log}
 """
+
+    # ------------------------------------------------------------------ #
+    #  Response parsing                                                   #
+    # ------------------------------------------------------------------ #
+
+    def parse_response(self, text: str) -> dict:
+        """
+        Parse the model response into a structured dict.
+
+        Priority:
+          1. Strict JSON parse
+          2. Extract first { } block (handles models that add commentary)
+          3. Graceful fallback — return raw text as root_cause
+
+        Always guarantees keys: root_cause, fix, prevention, confidence.
+        """
+        FALLBACK_CONFIDENCE = "low"
+
+        def _fill_missing(d: dict) -> dict:
+            d.setdefault("root_cause", "Could not parse AI response.")
+            d.setdefault("fix", "")
+            d.setdefault("prevention", "")
+            d.setdefault("confidence", FALLBACK_CONFIDENCE)
+            if d["confidence"] not in ("high", "medium", "low"):
+                d["confidence"] = FALLBACK_CONFIDENCE
+            return d
+
+        # 1. Strict parse
+        try:
+            result = json.loads(text)
+            if isinstance(result, dict):
+                return _fill_missing(result)
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+        # 2. Extract first JSON block
+        match = re.search(r"\{.*?\}", text, re.DOTALL)
+        if match:
+            try:
+                result = json.loads(match.group())
+                if isinstance(result, dict):
+                    return _fill_missing(result)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # 3. Fallback
+        return {
+            "root_cause": text.strip() or "No response from model.",
+            "fix": "",
+            "prevention": "",
+            "confidence": FALLBACK_CONFIDENCE,
+        }
